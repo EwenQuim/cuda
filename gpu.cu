@@ -159,7 +159,7 @@ void gpuProduct(gkid_t kid)
     Db.x = BLOCK_SIZE_X_K0;
     Db.y = 1;
     Db.z = 1;
-    Dg.x = SIZE / BLOCK_SIZE_X_K0;
+    Dg.x = (SIZE-1) / BLOCK_SIZE_X_K0 + 1;
     Dg.y = SIZE;
     Dg.z = 1;
     // - run the Grid of Blocs of threads
