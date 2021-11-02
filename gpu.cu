@@ -116,12 +116,16 @@ __global__ void TransposeKernel_v0(T_real *MT, T_real *M, int mLig, int nCol)
 __global__ void MatrixProductKernel_v0(void)
 {
   // Index computations
-  //int lig = ...
-  //int col = ...
-  //T_real res = 0.0;
+  int lig = blockIdx.y;
+  int col = blockIdx.x * BLOCK_SIZE_X_K0 + threadIdx.x;
+  T_real res = 0.0;
 
   // Matrix product computation
-  // ...
+  for (int i = 0; i < SIZE; i++)
+  {
+    res += GPU_A[lig][i] * GPU_B[i][col];
+  }
+  GPU_C[lig][col] = res;
 }
 
 /*-------------------------------------------------------------------------------*/
@@ -152,14 +156,14 @@ void gpuProduct(gkid_t kid)
   {
   case GK0: // Kernel v0 - 1D kernel using only resgisters and cache with generic matrix size
     // - init the grid of blocs
-    //Db.x = ;
-    //Db.y = ;
-    //Db.z = ;
-    //Dg.x = ;
-    //Dg.y = ;
-    //Dg.z = ;
+    Db.x = BLOCK_SIZE_X_K0;
+    Db.y = 1;
+    Db.z = 1;
+    Dg.x = SIZE / BLOCK_SIZE_X_K0;
+    Dg.y = SIZE;
+    Dg.z = 1;
     // - run the Grid of Blocs of threads
-    //MatrixProductKernel_v0<<<Dg,Db>>>();
+    MatrixProductKernel_v0<<<Dg, Db>>>();
     break;
 
   case GK1: // kernel v1 : 2D kernel using only registers and cache with generic matrix size
