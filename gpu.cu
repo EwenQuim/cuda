@@ -3,14 +3,14 @@
 /* S. Vialle - November 2021                                                     */
 /*********************************************************************************/
 
-#include <cublas_v2.h>
-#include <cuda.h>
-#include <cuda_runtime.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <cuda.h>
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
 
-#include "gpu.h"
 #include "main.h"
+#include "gpu.h"
 
 /*-------------------------------------------------------------------------------*/
 /* GPU symbols and global vars                                                   */
