@@ -176,7 +176,7 @@ __global__ void MatrixProductKernel_v2(void)
     }
     __syncthreads();
   }
-  GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x] * 2;
+  GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
 }
 
 /*-------------------------------------------------------------------------------*/
