@@ -161,18 +161,20 @@ __global__ void MatrixProductKernel_v2(void)
   {
     return;
   }
-
-  shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][col];
-  shdataB[threadIdx.x][threadIdx.y] = GPU_B[col][lig];
   shdataC[threadIdx.y][threadIdx.x] = 0.0;
-  __syncthreads();
 
-  // Matrix product computation
-  for (int i = 0; i < BLOCK_SIZE_XY_K2; i++)
+  for (int blockNum = 0; blockNum < SIZE / BLOCK_SIZE_XY_K2; blockNum++)
   {
-    shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.x];
-  }
+    shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K2 + threadIdx.x];
+    shdataB[threadIdx.y][threadIdx.x] = GPU_B[blockNum * BLOCK_SIZE_XY_K2 + threadIdx.y][col];
+    __syncthreads();
 
+    // Matrix product computation
+    for (int i = 0; i < BLOCK_SIZE_XY_K2; i++)
+    {
+      shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.x];
+    }
+  }
   GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
 }
 
