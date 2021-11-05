@@ -222,7 +222,7 @@ void gpuProduct(gkid_t kid)
     Dg.y = (SIZE - 1) / BLOCK_SIZE_Y_K1 + 1;
     Dg.z = 1;
     // - run the Grid of Blocs of threads
-    MatrixProductKernel_v0<<<Dg, Db>>>();
+    MatrixProductKernel_v1<<<Dg, Db>>>();
     break;
 
   case GK2: // kernel v2 : 2D kernel using the shared memories
