@@ -170,7 +170,7 @@ __global__ void MatrixProductKernel_v2(void)
   // Matrix product computation
   for (int i = 0; i < BLOCK_SIZE_XY_K2; i++)
   {
-    shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.y];
+    shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.x];
   }
 
   GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
