@@ -118,9 +118,9 @@ __global__ void MatrixProductKernel_v0(void)
   // Index computations
   int lig = blockIdx.y;
   int col = blockIdx.x * BLOCK_SIZE_X_K0 + threadIdx.x;
-  if (lig > SIZE || col > SIZE)
+  if (lig >= SIZE || col >= SIZE)
   {
-    return
+    return;
   }
   T_real res = 0.0;
 
