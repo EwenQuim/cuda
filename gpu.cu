@@ -138,11 +138,20 @@ __global__ void MatrixProductKernel_v0(void)
 __global__ void MatrixProductKernel_v1(void)
 {
   // Index computations
-  //int lig = ...
-  //int col = ..
+  int lig = blockIdx.y * BLOCK_SIZE_Y_K1 + threadIdx.y;
+  int col = blockIdx.x * BLOCK_SIZE_X_K1 + threadIdx.x;
+  if (lig >= SIZE || col >= SIZE)
+  {
+    return;
+  }
+  T_real res = 0.0;
 
   // Matrix product computation
-  //...
+  for (int i = 0; i < SIZE; i++)
+  {
+    res += GPU_A[lig][i] * GPU_B[i][col];
+  }
+  GPU_C[lig][col] = res;
 }
 
 /*-------------------------------------------------------------------------------*/
@@ -205,6 +214,15 @@ void gpuProduct(gkid_t kid)
     break;
 
   case GK1: // kernel v1 : 2D kernel using only registers and cache with generic matrix size
+            // - init the grid of blocs
+    Db.x = BLOCK_SIZE_X_K1;
+    Db.y = BLOCK_SIZE_Y_K1;
+    Db.z = 1;
+    Dg.x = (SIZE - 1) / BLOCK_SIZE_X_K1 + 1;
+    Dg.y = (SIZE - 1) / BLOCK_SIZE_Y_K1 + 1;
+    Dg.z = 1;
+    // - run the Grid of Blocs of threads
+    MatrixProductKernel_v0<<<Dg, Db>>>();
     break;
 
   case GK2: // kernel v2 : 2D kernel using the shared memories
