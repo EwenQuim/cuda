@@ -116,8 +116,8 @@ __global__ void TransposeKernel_v0(T_real *MT, T_real *M, int mLig, int nCol)
 __global__ void MatrixProductKernel_v0(void)
 {
   // Index computations
-  int col = blockIdx.y;
-  int lig = blockIdx.x * BLOCK_SIZE_X_K0 + threadIdx.x;
+  int lig = blockIdx.y;
+  int col = blockIdx.x * BLOCK_SIZE_X_K0 + threadIdx.x;
   if (lig >= SIZE || col >= SIZE)
   {
     return;
