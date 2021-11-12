@@ -171,7 +171,6 @@ __global__ void MatrixProductKernel_v2(void)
     return;
   }
   shdataC[threadIdx.y][threadIdx.x] = 0.0;
-
   for (int blockNum = 0; blockNum < SIZE / BLOCK_SIZE_XY_K2; blockNum++)
   {
     shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K2 + threadIdx.x];
@@ -188,6 +187,48 @@ __global__ void MatrixProductKernel_v2(void)
   GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
 }
 
+/*-------------------------------------------------------------------------------*/
+/* 2D kernel using the shared memories              */
+/*-------------------------------------------------------------------------------*/
+__global__ void MatrixProductKernel_v3(void)
+{
+  __shared__ T_real shdataA[BLOCK_SIZE_XY_K3][BLOCK_SIZE_XY_K3];
+  __shared__ T_real shdataB[BLOCK_SIZE_XY_K3][BLOCK_SIZE_XY_K3];
+  __shared__ T_real shdataC[BLOCK_SIZE_XY_K3][BLOCK_SIZE_XY_K3];
+
+  // Index computations
+  int lig = blockIdx.y * BLOCK_SIZE_XY_K3 + threadIdx.y;
+  int col = blockIdx.x * BLOCK_SIZE_XY_K3 + threadIdx.x;
+  if (lig >= SIZE || col >= SIZE)
+  {
+    return;
+  }
+  shdataC[threadIdx.y][threadIdx.x] = 0.0;
+  bool should_write_in_shared_memory = true;
+  bool should_read_in_shared_memory = true;
+  for (int blockNum = 0; blockNum < (SIZE - 1) / BLOCK_SIZE_XY_K3 + 1; blockNum++)
+  {
+    should_write_in_shared_memory = blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x < SIZE && blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y < SIZE;
+    if (should_write_in_shared_memory)
+    {
+      shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x];
+      shdataB[threadIdx.y][threadIdx.x] = GPU_B[blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y][col];
+    }
+    __syncthreads();
+
+    // Matrix product computation
+    for (int i = 0; i < BLOCK_SIZE_XY_K3; i++)
+    {
+      should_read_in_shared_memory = i < SIZE - blockNum * BLOCK_SIZE_XY_K3;
+      if (should_read_in_shared_memory)
+      {
+        shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.x];
+      }
+    }
+    __syncthreads();
+  }
+  GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
+}
 /*-------------------------------------------------------------------------------*/
 /* Small matrix product on the local GPU.                                        */
 /*-------------------------------------------------------------------------------*/
@@ -238,6 +279,15 @@ void gpuProduct(gkid_t kid)
     break;
 
   case GK3: // kernel v3 : 2D kernel using the shared memories with generic matrix size
+            // - init the grid of blocs
+    Db.x = BLOCK_SIZE_XY_K3;
+    Db.y = BLOCK_SIZE_XY_K3;
+    Db.z = 1;
+    Dg.x = (SIZE - 1) / BLOCK_SIZE_XY_K3 + 1;
+    Dg.y = (SIZE - 1) / BLOCK_SIZE_XY_K3 + 1;
+    Dg.z = 1;
+    // - run the Grid of Blocs of threads
+    MatrixProductKernel_v3<<<Dg, Db>>>();
     break;
 
   case GK4: // calling cublas gemm & user-defined transpose kernel
