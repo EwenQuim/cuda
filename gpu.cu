@@ -210,16 +210,13 @@ __global__ void MatrixProductKernel_v3(void)
     should_write_in_shared_memory_A = blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x < SIZE && lig < SIZE;
     should_write_in_shared_memory_B = blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y < SIZE && col < SIZE;
 
-    if (should_write_in_shared_memory)
+    if (should_write_in_shared_memory_A)
     {
-      if (should_write_in_shared_memory_A)
-      {
-        shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x];
-      }
-      if (should_write_in_shared_memory_B)
-      {
-        shdataB[threadIdx.y][threadIdx.x] = GPU_B[blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y][col];
-      }
+      shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x];
+    }
+    if (should_write_in_shared_memory_B)
+    {
+      shdataB[threadIdx.y][threadIdx.x] = GPU_B[blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y][col];
     }
     __syncthreads();
 
