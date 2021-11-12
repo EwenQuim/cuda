@@ -199,35 +199,48 @@ __global__ void MatrixProductKernel_v3(void)
   // Index computations
   int lig = blockIdx.y * BLOCK_SIZE_XY_K3 + threadIdx.y;
   int col = blockIdx.x * BLOCK_SIZE_XY_K3 + threadIdx.x;
-  if (lig >= SIZE || col >= SIZE)
-  {
-    return;
-  }
+  bool should_compute_final_result = lig < SIZE && col < SIZE;
+
   shdataC[threadIdx.y][threadIdx.x] = 0.0;
-  bool should_write_in_shared_memory = true;
+  bool should_write_in_shared_memory_A = true;
+  bool should_write_in_shared_memory_B = true;
   bool should_read_in_shared_memory = true;
   for (int blockNum = 0; blockNum < (SIZE - 1) / BLOCK_SIZE_XY_K3 + 1; blockNum++)
   {
-    should_write_in_shared_memory = blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x < SIZE && blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y < SIZE;
+    should_write_in_shared_memory_A = blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x < SIZE && lig < SIZE;
+    should_write_in_shared_memory_B = blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y < SIZE && col < SIZE;
+
     if (should_write_in_shared_memory)
     {
-      shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x];
-      shdataB[threadIdx.y][threadIdx.x] = GPU_B[blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y][col];
+      if (should_write_in_shared_memory_A)
+      {
+        shdataA[threadIdx.y][threadIdx.x] = GPU_A[lig][blockNum * BLOCK_SIZE_XY_K3 + threadIdx.x];
+      }
+      if (should_write_in_shared_memory_B)
+      {
+        shdataB[threadIdx.y][threadIdx.x] = GPU_B[blockNum * BLOCK_SIZE_XY_K3 + threadIdx.y][col];
+      }
     }
     __syncthreads();
 
     // Matrix product computation
-    for (int i = 0; i < BLOCK_SIZE_XY_K3; i++)
+    if (should_compute_final_result)
     {
-      should_read_in_shared_memory = i < SIZE - blockNum * BLOCK_SIZE_XY_K3;
-      if (should_read_in_shared_memory)
+      for (int i = 0; i < BLOCK_SIZE_XY_K3; i++)
       {
-        shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.x];
+        should_read_in_shared_memory = i < SIZE - blockNum * BLOCK_SIZE_XY_K3;
+        if (should_read_in_shared_memory)
+        {
+          shdataC[threadIdx.y][threadIdx.x] += shdataA[threadIdx.y][i] * shdataB[i][threadIdx.x];
+        }
       }
     }
     __syncthreads();
   }
-  GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
+  if (should_compute_final_result)
+  {
+    GPU_C[lig][col] = shdataC[threadIdx.y][threadIdx.x];
+  }
 }
 /*-------------------------------------------------------------------------------*/
 /* Small matrix product on the local GPU.                                        */
